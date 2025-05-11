@@ -854,6 +854,7 @@ func CreateGenesisState(
 				totalExecutions,
 			),
 		)
+		logger.Info("new tx")
 		txn, err := coinStore.NewTransaction(false)
 		for _, output := range genesisState.Outputs {
 			if err != nil {
@@ -864,6 +865,7 @@ func CreateGenesisState(
 			if err != nil {
 				logger.Panic("failed to get address of coin", zap.Error(err))
 			}
+			logger.Info("PutCoin")
 			err = coinStore.PutCoin(
 				txn,
 				0,
@@ -895,6 +897,7 @@ func CreateGenesisState(
 			for _, d := range proofs {
 				compressed = append(compressed, d)
 			}
+			logger.Info("put vertex")
 			vertTree, commitment, err := hypergraphStore.CommitAndSaveVertexData(
 				txn,
 				append(append([]byte{}, application.TOKEN_ADDRESS...), address...),
@@ -918,6 +921,7 @@ func CreateGenesisState(
 				logger.Panic("failed to add vertex", zap.Error(err))
 			}
 		}
+		logger.Info("COMMIT")
 		if err := txn.Commit(); err != nil {
 			logger.Panic("failed to commit transaction", zap.Error(err))
 		}

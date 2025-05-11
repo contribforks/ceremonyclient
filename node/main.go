@@ -334,7 +334,7 @@ func main() {
 	}
 
 	if *compactDB && *core == 0 {
-		db := store.NewPebbleDB(nodeConfig.DB)
+		db := store.NewMDBXDB(nodeConfig.DB)
 		if err := db.CompactAll(); err != nil {
 			logger.Fatal("Failed to compact database", zap.Error(err))
 		}
