@@ -37,24 +37,24 @@ func NewDHTNode(configConfig *config.Config) (*DHTNode, error) {
 func NewDebugNode(configConfig *config.Config, selfTestReport *protobufs.SelfTestReport) (*Node, error) {
 	zapLogger := debugLogger()
 	dbConfig := configConfig.DB
-	pebbleDB := store.NewPebbleDB(dbConfig)
-	pebbleDataProofStore := store.NewPebbleDataProofStore(pebbleDB, zapLogger)
-	pebbleClockStore := store.NewPebbleClockStore(pebbleDB, zapLogger)
-	pebbleCoinStore := store.NewPebbleCoinStore(pebbleDB, zapLogger)
+	rocksDB := store.NewRocksDB(dbConfig)
+	pebbleDataProofStore := store.NewPebbleDataProofStore(rocksDB, zapLogger)
+	pebbleClockStore := store.NewPebbleClockStore(rocksDB, zapLogger)
+	pebbleCoinStore := store.NewPebbleCoinStore(rocksDB, zapLogger)
 	keyConfig := configConfig.Key
 	fileKeyManager := keys.NewFileKeyManager(keyConfig, zapLogger)
 	p2PConfig := configConfig.P2P
 	blossomSub := p2p.NewBlossomSub(p2PConfig, zapLogger)
 	frameProver := crypto.NewCachedWesolowskiFrameProver(zapLogger)
 	kzgInclusionProver := crypto.NewKZGInclusionProver(zapLogger)
-	pebbleHypergraphStore := store.NewPebbleHypergraphStore(pebbleDB, zapLogger)
+	pebbleHypergraphStore := store.NewPebbleHypergraphStore(rocksDB, zapLogger)
 	engineConfig := configConfig.Engine
 	masterTimeReel := time.NewMasterTimeReel(zapLogger, pebbleClockStore, engineConfig, frameProver)
 	inMemoryPeerInfoManager := p2p.NewInMemoryPeerInfoManager(zapLogger)
-	pebbleKeyStore := store.NewPebbleKeyStore(pebbleDB, zapLogger)
+	pebbleKeyStore := store.NewPebbleKeyStore(rocksDB, zapLogger)
 	tokenExecutionEngine := token.NewTokenExecutionEngine(zapLogger, configConfig, fileKeyManager, blossomSub, frameProver, kzgInclusionProver, pebbleClockStore, pebbleDataProofStore, pebbleHypergraphStore, pebbleCoinStore, masterTimeReel, inMemoryPeerInfoManager, pebbleKeyStore, selfTestReport)
 	masterClockConsensusEngine := master.NewMasterClockConsensusEngine(engineConfig, zapLogger, pebbleClockStore, fileKeyManager, blossomSub, kzgInclusionProver, frameProver, masterTimeReel, inMemoryPeerInfoManager, selfTestReport)
-	node, err := newNode(zapLogger, pebbleDataProofStore, pebbleClockStore, pebbleCoinStore, fileKeyManager, blossomSub, tokenExecutionEngine, masterClockConsensusEngine, pebbleDB)
+	node, err := newNode(zapLogger, pebbleDataProofStore, pebbleClockStore, pebbleCoinStore, fileKeyManager, blossomSub, tokenExecutionEngine, masterClockConsensusEngine, rocksDB)
 	if err != nil {
 		return nil, err
 	}
@@ -64,24 +64,24 @@ func NewDebugNode(configConfig *config.Config, selfTestReport *protobufs.SelfTes
 func NewNode(configConfig *config.Config, selfTestReport *protobufs.SelfTestReport) (*Node, error) {
 	zapLogger := logger()
 	dbConfig := configConfig.DB
-	pebbleDB := store.NewPebbleDB(dbConfig)
-	pebbleDataProofStore := store.NewPebbleDataProofStore(pebbleDB, zapLogger)
-	pebbleClockStore := store.NewPebbleClockStore(pebbleDB, zapLogger)
-	pebbleCoinStore := store.NewPebbleCoinStore(pebbleDB, zapLogger)
+	rocksDB := store.NewRocksDB(dbConfig)
+	pebbleDataProofStore := store.NewPebbleDataProofStore(rocksDB, zapLogger)
+	pebbleClockStore := store.NewPebbleClockStore(rocksDB, zapLogger)
+	pebbleCoinStore := store.NewPebbleCoinStore(rocksDB, zapLogger)
 	keyConfig := configConfig.Key
 	fileKeyManager := keys.NewFileKeyManager(keyConfig, zapLogger)
 	p2PConfig := configConfig.P2P
 	blossomSub := p2p.NewBlossomSub(p2PConfig, zapLogger)
 	frameProver := crypto.NewCachedWesolowskiFrameProver(zapLogger)
 	kzgInclusionProver := crypto.NewKZGInclusionProver(zapLogger)
-	pebbleHypergraphStore := store.NewPebbleHypergraphStore(pebbleDB, zapLogger)
+	pebbleHypergraphStore := store.NewPebbleHypergraphStore(rocksDB, zapLogger)
 	engineConfig := configConfig.Engine
 	masterTimeReel := time.NewMasterTimeReel(zapLogger, pebbleClockStore, engineConfig, frameProver)
 	inMemoryPeerInfoManager := p2p.NewInMemoryPeerInfoManager(zapLogger)
-	pebbleKeyStore := store.NewPebbleKeyStore(pebbleDB, zapLogger)
+	pebbleKeyStore := store.NewPebbleKeyStore(rocksDB, zapLogger)
 	tokenExecutionEngine := token.NewTokenExecutionEngine(zapLogger, configConfig, fileKeyManager, blossomSub, frameProver, kzgInclusionProver, pebbleClockStore, pebbleDataProofStore, pebbleHypergraphStore, pebbleCoinStore, masterTimeReel, inMemoryPeerInfoManager, pebbleKeyStore, selfTestReport)
 	masterClockConsensusEngine := master.NewMasterClockConsensusEngine(engineConfig, zapLogger, pebbleClockStore, fileKeyManager, blossomSub, kzgInclusionProver, frameProver, masterTimeReel, inMemoryPeerInfoManager, selfTestReport)
-	node, err := newNode(zapLogger, pebbleDataProofStore, pebbleClockStore, pebbleCoinStore, fileKeyManager, blossomSub, tokenExecutionEngine, masterClockConsensusEngine, pebbleDB)
+	node, err := newNode(zapLogger, pebbleDataProofStore, pebbleClockStore, pebbleCoinStore, fileKeyManager, blossomSub, tokenExecutionEngine, masterClockConsensusEngine, rocksDB)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +98,9 @@ func NewDBConsole(configConfig *config.Config) (*DBConsole, error) {
 
 func NewClockStore(configConfig *config.Config) (store.ClockStore, error) {
 	dbConfig := configConfig.DB
-	pebbleDB := store.NewPebbleDB(dbConfig)
+	rocksDB := store.NewRocksDB(dbConfig)
 	zapLogger := logger()
-	pebbleClockStore := store.NewPebbleClockStore(pebbleDB, zapLogger)
+	pebbleClockStore := store.NewPebbleClockStore(rocksDB, zapLogger)
 	return pebbleClockStore, nil
 }
 
@@ -134,7 +134,7 @@ var debugLoggerSet = wire.NewSet(
 
 var keyManagerSet = wire.NewSet(wire.FieldsOf(new(*config.Config), "Key"), keys.NewFileKeyManager, wire.Bind(new(keys.KeyManager), new(*keys.FileKeyManager)))
 
-var storeSet = wire.NewSet(wire.FieldsOf(new(*config.Config), "DB"), store.NewPebbleDB, wire.Bind(new(store.KVDB), new(*store.PebbleDB)), store.NewPebbleClockStore, store.NewPebbleCoinStore, store.NewPebbleKeyStore, store.NewPebbleDataProofStore, store.NewPebbleHypergraphStore, store.NewPeerstoreDatastore, wire.Bind(new(store.ClockStore), new(*store.PebbleClockStore)), wire.Bind(new(store.CoinStore), new(*store.PebbleCoinStore)), wire.Bind(new(store.KeyStore), new(*store.PebbleKeyStore)), wire.Bind(new(store.DataProofStore), new(*store.PebbleDataProofStore)), wire.Bind(new(store.HypergraphStore), new(*store.PebbleHypergraphStore)), wire.Bind(new(store.Peerstore), new(*store.PeerstoreDatastore)))
+var storeSet = wire.NewSet(wire.FieldsOf(new(*config.Config), "DB"), store.NewRocksDB, wire.Bind(new(store.KVDB), new(*store.RocksDB)), store.NewPebbleClockStore, store.NewPebbleCoinStore, store.NewPebbleKeyStore, store.NewPebbleDataProofStore, store.NewPebbleHypergraphStore, store.NewPeerstoreDatastore, wire.Bind(new(store.ClockStore), new(*store.PebbleClockStore)), wire.Bind(new(store.CoinStore), new(*store.PebbleCoinStore)), wire.Bind(new(store.KeyStore), new(*store.PebbleKeyStore)), wire.Bind(new(store.DataProofStore), new(*store.PebbleDataProofStore)), wire.Bind(new(store.HypergraphStore), new(*store.PebbleHypergraphStore)), wire.Bind(new(store.Peerstore), new(*store.PeerstoreDatastore)))
 
 var pubSubSet = wire.NewSet(wire.FieldsOf(new(*config.Config), "P2P"), p2p.NewInMemoryPeerInfoManager, p2p.NewBlossomSub, wire.Bind(new(p2p.PubSub), new(*p2p.BlossomSub)), wire.Bind(new(p2p.PeerInfoManager), new(*p2p.InMemoryPeerInfoManager)))
 
