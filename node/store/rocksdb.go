@@ -30,6 +30,8 @@ func (c *RocksDBCloser) Close() error {
 func NewRocksDB(config *config.DBConfig) *RocksDB {
 	opts := grocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
+	cache := grocksdb.NewLRUCache(1 << 30)
+	opts.SetRowCache(cache)
 
 	db, err := grocksdb.OpenDb(opts, config.Path)
 	if err != nil {
@@ -212,15 +214,7 @@ type RocksDBIterator struct {
 }
 
 func (i *RocksDBIterator) Key() []byte {
-	if !i.Valid() {
-		return nil
-	}
-
-	key := i.iter.Key()
-	keyData := make([]byte, len(key.Data()))
-	copy(keyData, key.Data())
-	key.Free()
-	return keyData
+	return i.iter.Key().Data()
 }
 
 func (i *RocksDBIterator) First() bool {
@@ -229,17 +223,11 @@ func (i *RocksDBIterator) First() bool {
 }
 
 func (i *RocksDBIterator) Next() bool {
-	if !i.Valid() {
-		return false
-	}
 	i.iter.Next()
 	return i.Valid()
 }
 
 func (i *RocksDBIterator) Prev() bool {
-	if !i.Valid() {
-		return false
-	}
 	i.iter.Prev()
 	return i.Valid()
 }
@@ -249,15 +237,7 @@ func (i *RocksDBIterator) Valid() bool {
 }
 
 func (i *RocksDBIterator) Value() []byte {
-	if !i.Valid() {
-		return nil
-	}
-
-	value := i.iter.Value()
-	valueData := make([]byte, len(value.Data()))
-	copy(valueData, value.Data())
-	value.Free()
-	return valueData
+	return i.iter.Value().Data()
 }
 
 func (i *RocksDBIterator) Close() error {
