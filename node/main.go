@@ -100,7 +100,7 @@ var (
 	migrate = flag.String(
 		"migrate",
 		"",
-		"migrate from Pebble to MDBX from specified path (e.g. /home/user/backup/.config/store)",
+		"migrate from Pebble to RocksDB from specified path (e.g. /home/user/backup/.config/store)",
 	)
 	debug = flag.Bool(
 		"debug",
@@ -391,33 +391,54 @@ func main() {
 			Path: *migrate,
 		}
 		pebbleInput := store.NewPebbleDB(dbConfig)
-		mdbxOutput := store.NewRocksDB(nodeConfig.DB)
+		rocksDBOutput := store.NewRocksDB(nodeConfig.DB)
 
 		allIter, err := pebbleInput.NewIter(nil, nil)
 		if err != nil {
 			panic(err)
 		}
-		batch := mdbxOutput.NewBatch(false)
+		batch := rocksDBOutput.NewBatch(false)
 		total := 0
-		for allIter.First(); allIter.Valid(); allIter.Next() {
-			err := batch.Set(allIter.Key(), allIter.Value())
+
+		type TempItem struct {
+			key   []byte
+			value []byte
+			done  bool
+		}
+		const batch_size = 200_000
+		c := make(chan TempItem, batch_size)
+		go func() {
+			for allIter.First(); allIter.Valid(); allIter.Next() {
+				item := TempItem{key: make([]byte, len(allIter.Key())), value: make([]byte, len(allIter.Value())), done: false}
+				copy(item.key, allIter.Key())
+				copy(item.value, allIter.Value())
+				c <- item
+			}
+			c <- TempItem{done: true}
+		}()
+		for item := range c {
+			if item.done {
+				break
+			}
+			err := batch.Set(item.key, item.value)
 			if err != nil {
 				panic(err)
 			}
 			total++
-			if total%10_000 == 0 {
+			if total%batch_size == 0 {
 				err := batch.Commit()
+				batch = rocksDBOutput.NewBatch(false)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Printf("Commit. Total: %d", total)
+				fmt.Printf("Commit. Total: %d\n", total)
 			}
 		}
 		err = batch.Commit()
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Commit. Total: %d", total)
+		fmt.Printf("Commit. Total: %d\n", total)
 		err = allIter.Close()
 		if err != nil {
 			panic(err)
@@ -426,7 +447,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		err = mdbxOutput.Close()
+		err = rocksDBOutput.Close()
 		if err != nil {
 			panic(err)
 		}
